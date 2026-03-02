@@ -56,8 +56,10 @@ export class ReportMergingTool {
     const targetDir = getMidsceneRunSubDir('report');
 
     // Check if any source report is directory mode
-    const hasDirectoryModeReport = this.reportInfos.some((info) =>
-      this.isDirectoryModeReport(info.reportFilePath),
+    const hasDirectoryModeReport = this.reportInfos.some(
+      (info) =>
+        info.reportFilePath &&
+        this.isDirectoryModeReport(info.reportFilePath),
     );
 
     const resolvedName =
@@ -106,6 +108,29 @@ export class ReportMergingTool {
         const reportInfo = this.reportInfos[i];
         logMsg(`Processing report ${i + 1}/${this.reportInfos.length}`);
 
+        const { reportAttributes } = reportInfo;
+
+        // Entries without a report file (e.g. skipped tests) — emit attributes only
+        if (!reportInfo.reportFilePath) {
+          const reportHtmlStr = `${reportHTMLContent(
+            {
+              dumpString: '',
+              attributes: {
+                playwright_test_duration: reportAttributes.testDuration,
+                playwright_test_status: reportAttributes.testStatus,
+                playwright_test_title: reportAttributes.testTitle,
+                playwright_test_id: reportAttributes.testId,
+                playwright_test_description: reportAttributes.testDescription,
+              },
+            },
+            undefined,
+            undefined,
+            false,
+          )}\n`;
+          appendFileSync(outputFilePath, reportHtmlStr);
+          continue;
+        }
+
         if (this.isDirectoryModeReport(reportInfo.reportFilePath)) {
           // Directory mode: copy external screenshot files
           const reportDir = path.dirname(reportInfo.reportFilePath);
@@ -126,7 +151,6 @@ export class ReportMergingTool {
         }
 
         const dumpString = extractLastDumpScriptSync(reportInfo.reportFilePath);
-        const { reportAttributes } = reportInfo;
 
         const reportHtmlStr = `${reportHTMLContent(
           {
@@ -152,6 +176,7 @@ export class ReportMergingTool {
       // Remove original reports if needed
       if (rmOriginalReports) {
         for (const info of this.reportInfos) {
+          if (!info.reportFilePath) continue;
           try {
             if (this.isDirectoryModeReport(info.reportFilePath)) {
               // Directory mode: remove the entire report directory

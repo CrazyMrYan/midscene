@@ -94,7 +94,7 @@ export function PlaywrightCaseSelector({
       <span key={key}>
         {status}
         {'  '}
-        {`${dump.attributes.playwright_test_title || 'unnamed'} - ${dump.attributes.playwright_test_description || ''}`}
+        {dump.attributes.playwright_test_description || dump.attributes.playwright_test_title || 'unnamed'}
         {cost}
       </span>
     );
@@ -148,13 +148,19 @@ export function PlaywrightCaseSelector({
     setIsExpanded(!isExpanded);
   };
 
+  const isEmptyDump = (dump: PlaywrightTasks) => {
+    const status = dump.attributes?.playwright_test_status;
+    return status === 'skipped' || status === 'interrupted';
+  };
+
   const handlePlaywrightTaskSelect = async (dump: PlaywrightTasks) => {
+    if (isEmptyDump(dump)) return;
     await setGroupedDump(dump.get(), dump.attributes);
     setIsExpanded(false);
   };
 
   const displayText = selected
-    ? `${selected.groupName} - (${(playwrightAttributes?.playwright_test_duration || 0) / 1000}s)`
+    ? `${playwrightAttributes?.playwright_test_description || playwrightAttributes?.playwright_test_title || selected.groupName} (${(playwrightAttributes?.playwright_test_duration || 0) / 1000}s)`
     : 'Select a case';
 
   return (
@@ -216,7 +222,7 @@ export function PlaywrightCaseSelector({
             {filteredDumps.map((dump, index) => (
               <div
                 key={index}
-                className={`option-item ${playwrightAttributes?.playwright_test_id === dump.attributes.playwright_test_id ? 'selected' : ''}`}
+                className={`option-item ${playwrightAttributes?.playwright_test_id === dump.attributes.playwright_test_id ? 'selected' : ''} ${isEmptyDump(dump) ? 'disabled' : ''}`}
                 onClick={() => handlePlaywrightTaskSelect(dump)}
               >
                 <div className="option-content">
